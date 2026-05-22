@@ -27,7 +27,7 @@ jobs:
          --redact \
          --exit-code 0
 
-     - name: gitleaks-report
+     - name: Gitleaks Report
        uses: actions/upload-artifact@v7
        with:
          name: gitleaks-json
