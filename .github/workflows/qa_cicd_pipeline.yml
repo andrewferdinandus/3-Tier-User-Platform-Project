@@ -45,7 +45,7 @@ jobs:
           python-version: '3.11'
       - name: Install Checkov
         run: pip install checkov
-      - name: Run Checkove Terraform Scan
+      - name: Run Checkov Terraform Scan
         run: |
           checkov -d . \
           --framework terraform \
@@ -70,7 +70,7 @@ jobs:
           python-version: '3.11'
       - name: Install Checkov
         run: pip install checkov
-      - name: Run Checkove Kubernetes Scan
+      - name: Run Checkov Kubernetes Scan
         run: |
           checkov -d . \
           --framework kubernetes \
@@ -95,7 +95,7 @@ jobs:
           python-version: '3.11'
       - name: Install Checkov
         run: pip install checkov
-      - name: Run Checkove Dockerfile Scan
+      - name: Run Checkov Dockerfile Scan
         run: |
           checkov -d . \
           --framework dockerfile \
