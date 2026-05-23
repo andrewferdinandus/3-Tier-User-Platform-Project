@@ -123,26 +123,18 @@ jobs:
         run: |
           trivy --version
           which trivy
-     # Can use both format Jsaon / Txt
-     # - name: Trivy FS vulnerability Scanning on Client (JSON)
-     #   run: |
-     #     trivy fs ./client \
-     #     --format json \
-     #     --output client-trivy-fs-report.json
-     #     --severity HIGH, CRITICAL \
-     #      --ignore-unfixed \
-     #     --exit-code 0 
+          
       - name: Trivy FS vulnerability Scanning on Client (TABLE)
         run: |
           trivy fs ./client \
           --format table \
-          --severity HIGH, CRITICAL \
+          --severity HIGH,CRITICAL \
           --ignore-unfixed \
           --exit-code 0 > client-trivy-fs-report.txt
-      - name: Upload Trivy Report
+      - name: Upload Trivy FS Client Report
         uses: actions/upload-artifact@v7
         with:
-          name: Trivy Scan Report
+          name: Trivy Scan Report (Client)
           path: client-trivy-fs-report.txt
           if-no-files-found: warn 
 
@@ -166,13 +158,13 @@ jobs:
          run: |
            trivy fs ./server \
            --format table \
-           --severity HIGH, CRITICAL \
+           --severity HIGH,CRITICAL \
            --ignore-unfixed \
            --exit-code 0 > server-trivy-fs-report.txt
-       - name: Upload Trivy Report
+       - name: Upload Trivy FS Server Report
          uses: actions/upload-artifact@v7
          with:
-           name: Trivy Scan Report
+           name: Trivy Scan Report (Server)
            path: server-trivy-fs-report.txt
            if-no-files-found: warn
 
