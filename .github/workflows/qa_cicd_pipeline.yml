@@ -145,6 +145,7 @@ jobs:
           name: Trivy Scan Report
           path: client-trivy-fs-report.txt
           if-no-files-found: warn 
+          
       - name: Trivy FS vulnerability Scanning on Server (TABLE)
         run: |
           trivy fs ./server \
