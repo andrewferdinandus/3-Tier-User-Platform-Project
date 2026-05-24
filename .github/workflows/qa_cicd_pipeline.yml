@@ -195,7 +195,7 @@ jobs:
          run: npm run lint --if-present
          continue-on-error: true
   
-  client-lint:
+  server-lint:
      name: Server Lint Scan
      runs-on: ubuntu-latest
      needs: 
