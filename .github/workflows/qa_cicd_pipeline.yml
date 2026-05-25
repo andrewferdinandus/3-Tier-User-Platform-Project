@@ -239,7 +239,7 @@ jobs:
          with:
            node-version: 19
            cache: npm
-           chache-dependency-path: client/package.json
+           cache-dependency-path: client/package.json
 
        - name: Install Client Dependencies
          run: npm ci
@@ -263,7 +263,7 @@ jobs:
           with:
             node-version: 19
             cache: npm
-            chache-dependency-path: server/package.json
+            cache-dependency-path: server/package.json
  
         - name: Install Server Dependencies
           run: npm ci
