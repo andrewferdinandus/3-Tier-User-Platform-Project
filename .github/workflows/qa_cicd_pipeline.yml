@@ -7,7 +7,6 @@ on:
      - client/**
      - server/**
      - .github/workflows/qa_cicd_pipeline.yml
-
 jobs:
   gitleaks-scan:
    name: Gitleaks Scan
