@@ -5,8 +5,6 @@ COPY client/package*.json ./
 RUN npm install
 COPY client/ ./
 RUN npm run build
-RUN ls -la               
-RUN ls -la ./dist || true
 
 FROM node:20-alpine AS server-builder
 
@@ -22,7 +20,7 @@ ENV NODE_ENV=production
 COPY --from=server-builder /usr/src/app/server ./
 RUN mkdir -p ./public
 
-COPY --from=client-builder /usr/src/app/client/dist ./public/
+COPY --from=client-builder /usr/src/app/client/public ./public/
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /usr/src/app/server
 
