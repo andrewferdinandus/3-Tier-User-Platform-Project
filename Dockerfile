@@ -20,7 +20,7 @@ ENV NODE_ENV=production
 COPY --from=server-builder /usr/src/app/server ./
 RUN mkdir -p ./public
 
-COPY --from=client-builder /usr/src/app/client/dist ./public/
+COPY --from=client-builder /usr/src/app/client/build ./public/
 RUN addgroup -S appgroup && adduser -S appuser -G appgroup
 RUN chown -R appuser:appgroup /usr/src/app/server
 
