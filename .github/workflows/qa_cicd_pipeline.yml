@@ -416,6 +416,22 @@ jobs:
           path: docker-trivy-imagescan.txt
           if-no-files-found: warn
 
+      - name: Generate Source SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: source-sbom-spdx.json
+          upload-artifact: true
+
+      - name: Generate Image SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
+          format: spdx-json
+          output-file: image-sbom-spdx.json
+          upload-artifact: true
+
       - name: Push Docker Image to Docker Hub
         uses: docker/build-push-action@v6
         with:
@@ -427,8 +443,7 @@ jobs:
             ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
           
 
-    
-
+      
 
          
       
