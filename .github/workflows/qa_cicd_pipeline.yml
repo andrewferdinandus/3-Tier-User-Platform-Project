@@ -1,4 +1,4 @@
-name: QA DevSecOps CICD Pipeline
+name: QA DevSecOps CICD Pipeline Test
 on: 
  push:
    branches:
