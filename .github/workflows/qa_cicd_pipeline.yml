@@ -245,7 +245,7 @@ jobs:
          run: npm ci
        - name: Run Client Test
          run: npm test --if-present
-         continue-on-error: true
+         #continue-on-error: true
 
   server-test:
       name: Server Test
@@ -269,11 +269,37 @@ jobs:
           run: npm ci
         - name: Run Server Test
           run: npm test --if-present
-          continue-on-error: true
+          #continue-on-error: true
           
+  sonarqube:
+    name: Sonarqube Analysis & Quality Gate Check
+    runs-on: ubuntu-latest
+    needs: 
+      - client-test
+      - server-test 
+    steps:
+      - name: Source Code Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
 
-
+      - name: SonarQube Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} #OPTIONAL
+      
+      - name: "SonarQube Quality Gate Status"
+        run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
 
 
 
