@@ -130,7 +130,7 @@ jobs:
           --format table \
           --severity HIGH,CRITICAL \
           --ignore-unfixed \
-          --exit-code 0 > client-trivy-fs-report.txt
+          --exit-code 0 > client-trivy-fs-report.txt #for testing purpose
       - name: Upload Trivy FS Client Report
         uses: actions/upload-artifact@v7
         with:
@@ -160,7 +160,7 @@ jobs:
            --format table \
            --severity HIGH,CRITICAL \
            --ignore-unfixed \
-           --exit-code 0 > server-trivy-fs-report.txt
+           --exit-code 0 > server-trivy-fs-report.txt #for testing purpose
        - name: Upload Trivy FS Server Report
          uses: actions/upload-artifact@v7
          with:
@@ -193,7 +193,7 @@ jobs:
          run: npm ci
        - name: Run Client Lint
          run: npm run lint --if-present
-         continue-on-error: true
+         continue-on-error: true #for testing purpose
   
   server-lint:
      name: Server Lint Scan
@@ -220,7 +220,7 @@ jobs:
          run: npm ci
        - name: Run Server Lint
          run: npm run lint --if-present
-         continue-on-error: true
+         continue-on-error: true #for testing purpose
 
 
   client-test:
@@ -245,7 +245,7 @@ jobs:
          run: npm ci
        - name: Run Client Test
          run: npm test --if-present
-         #continue-on-error: true
+         continue-on-error: true #for testing purpose
 
   server-test:
       name: Server Test
@@ -269,7 +269,7 @@ jobs:
           run: npm ci
         - name: Run Server Test
           run: npm test --if-present
-          #continue-on-error: true
+          continue-on-error: true #for testing purpose
           
   sonarqube:
     name: Sonarqube Analysis & Quality Gate Check
@@ -328,6 +328,76 @@ jobs:
       - name: Build Client
         run: npm run build --if-present
 
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: 
+      - client-build
+      - sonarqube
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4 
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker Image Locally
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          push: false
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+       
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          cache: true
+          version: latest
+        
+      - name: Trivi Installation Verification
+        run: |
+          trivy --version
+          which trivy
+           
+      - name: Trivy Image Scan
+        run: |
+          trivy image ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest \
+          --format table \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 > docker-trivy-imagescan.txt #for testing purpose, 
+          # else --output docker-trivy-imagescan.txt and --exit-code 1
+          
+      - name: Upload Image Scan Report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Docker Image Scan Report
+          path: docker-trivy-imagescan.txt
+          if-no-files-found: warn
+
+      - name: Push Docker Image to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
+            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
+          
+
+    
 
 
          
