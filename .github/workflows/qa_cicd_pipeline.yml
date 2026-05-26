@@ -427,7 +427,7 @@ jobs:
       - name: Generate Image SBOM
         uses: anchore/sbom-action@v0
         with:
-          image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
+          image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
           format: spdx-json
           output-file: image-sbom-spdx.json
           upload-artifact: true
