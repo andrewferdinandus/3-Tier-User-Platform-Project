@@ -1,0 +1,544 @@
+name: QA DevSecOps CICD Pipeline Test
+on: 
+ push:
+   branches:
+     - qa
+   paths:
+     - client/**
+     - server/**
+     - .github/workflows/qa_cicd_pipeline.yml
+jobs:
+  gitleaks-scan:
+   name: Gitleaks Scan
+   runs-on: ubuntu-latest
+   steps:
+     - name: Checkout Source Code
+       uses: actions/checkout@v6
+       
+     - name: Run Gitlekas Scan
+       run: |
+         docker run --rm \
+         -v "${{github.workspace}}:/repo" \
+         zricethezav/gitleaks:latest detect \
+         --source=/repo \
+         --report-format=json \
+         --report-path=/repo/gitleaks-report.json \
+         --redact \
+         --exit-code 0
+         
+     - name: Gitleaks Report
+       uses: actions/upload-artifact@v7
+       with:
+         name: gitleaks-json
+         path: gitleaks-report.json
+         if-no-files-found: warn
+
+  checkov-terraform:
+    name: Checkov Terraform Scan
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+        
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          
+      - name: Install Checkov
+        run: pip install checkov
+        
+      - name: Run Checkov Terraform Scan
+        run: |
+          checkov -d . \
+          --framework terraform \
+          --output json > checkov-terraform-report.json || true
+          
+      - name: Upload Checkov Terraform Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: Checkov Terraform Report
+          path: checkov-terraform-report.json
+          if-no-files-found: warn
+
+  checkov-k8s:
+    name: Checkov Kubernetes Scan
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+        
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          
+      - name: Install Checkov
+        run: pip install checkov
+        
+      - name: Run Checkov Kubernetes Scan
+        run: |
+          checkov -d . \
+          --framework kubernetes \
+          --output json > checkov-kubernetes-report.json || true
+          
+      - name: Upload Checkov Kubernetes Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: Checkov Kubernetes Report
+          path: checkov-kubernetes-report.json
+          if-no-files-found: warn 
+
+  checkov-dockerfile:
+    name: Checkov Dockerfile Scan
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+        
+      - name: Setup Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: '3.11'
+          
+      - name: Install Checkov
+        run: pip install checkov
+      - name: Run Checkov Dockerfile Scan
+        run: |
+          checkov -d . \
+          --framework dockerfile \
+          --output json > checkov-dockerfile-report.json || true
+          
+      - name: Upload Checkov Dockerfile Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: Checkov Dockerfile Report
+          path: checkov-dockerfile-report.json
+          if-no-files-found: warn
+
+  client-trivy-fs:
+    name: Client Trivy FS Scan
+    runs-on: ubuntu-latest
+    needs: gitleaks-scan
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v6
+        
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          cache: true
+          version: latest
+          
+      - name: Trivi Installation Verification
+        run: |
+          trivy --version
+          which trivy
+          
+      - name: Trivy FS vulnerability Scanning on Client (TABLE)
+        run: |
+          trivy fs ./client \
+          --format table \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 > client-trivy-fs-report.txt #for testing purpose
+          
+      - name: Upload Trivy FS Client Report
+        uses: actions/upload-artifact@v7
+        with:
+          name: Trivy Scan Report (Client)
+          path: client-trivy-fs-report.txt
+          if-no-files-found: warn 
+
+  server-trivy-fs:
+     name: Server Trivy FS Scan
+     runs-on: ubuntu-latest
+     needs: gitleaks-scan
+     steps:
+       - name: Checkout Source Code
+         uses: actions/checkout@v6
+         
+       - name: Install Trivy
+         uses: aquasecurity/setup-trivy@v0.2.6
+         with:
+           cache: true
+           version: latest
+           
+       - name: Trivi Installation Verification
+         run: |
+           trivy --version
+           which trivy
+           
+       - name: Trivy FS vulnerability Scanning on Server (TABLE)
+         run: |
+           trivy fs ./server \
+           --format table \
+           --severity HIGH,CRITICAL \
+           --ignore-unfixed \
+           --exit-code 0 > server-trivy-fs-report.txt #for testing purpose
+         
+       - name: Upload Trivy FS Server Report
+         uses: actions/upload-artifact@v7
+         with:
+           name: Trivy Scan Report (Server)
+           path: server-trivy-fs-report.txt
+           if-no-files-found: warn
+
+  client-lint:
+     name: Client Lint Scan
+     runs-on: ubuntu-latest
+     needs: 
+       - client-trivy-fs
+       - checkov-terraform
+       - checkov-dockerfile
+       - checkov-k8s
+
+     defaults:
+       run:
+         working-directory: client
+     steps: 
+       - name: Source Code Checkout
+         uses: actions/checkout@v6
+         
+       - name: Setup NodeJS
+         uses: actions/setup-node@v4
+         with:
+           node-version: 19
+           cache: npm
+           cache-dependency-path: client/package.json
+           
+       - name: Install Client Dependencies
+         run: npm ci
+         
+       - name: Run Client Lint
+         run: npm run lint --if-present
+         continue-on-error: true #for testing purpose
+  
+  server-lint:
+     name: Server Lint Scan
+     runs-on: ubuntu-latest
+     needs: 
+       - server-trivy-fs
+       - checkov-terraform
+       - checkov-dockerfile
+       - checkov-k8s
+
+     defaults:
+       run:
+         working-directory: server
+     steps: 
+       - name: Source Code Checkout
+         uses: actions/checkout@v6
+         
+       - name: Setup NodeJS
+         uses: actions/setup-node@v4
+         with:
+           node-version: 19
+           cache: npm
+           cache-dependency-path: server/package.json
+           
+       - name: Install Server Dependencies
+         run: npm ci
+         
+       - name: Run Server Lint
+         run: npm run lint --if-present
+         continue-on-error: true #for testing purpose
+
+
+  client-test:
+     name: Client Test
+     runs-on: ubuntu-latest
+     needs: client-lint
+       
+     defaults:
+       run:
+         working-directory: client
+     steps:
+       - name: Source Code Checkout
+         uses: actions/checkout@v6
+         
+       - name: Setup NodeJS
+         uses: actions/setup-node@v4
+         with:
+           node-version: 19
+           cache: npm
+           cache-dependency-path: client/package.json
+
+       - name: Install Client Dependencies
+         run: npm ci
+         
+       - name: Run Client Test
+         run: npm test --if-present
+         continue-on-error: true #for testing purpose
+
+  server-test:
+      name: Server Test
+      runs-on: ubuntu-latest
+      needs: server-lint
+        
+      defaults:
+        run:
+          working-directory: server
+      steps:
+        - name: Source Code Checkout
+          uses: actions/checkout@v6
+          
+        - name: Setup NodeJS
+          uses: actions/setup-node@v4
+          with:
+            node-version: 19
+            cache: npm
+            cache-dependency-path: server/package.json
+ 
+        - name: Install Server Dependencies
+          run: npm ci
+          
+        - name: Run Server Test
+          run: npm test --if-present
+          continue-on-error: true #for testing purpose
+          
+  sonarqube:
+    name: Sonarqube Analysis & Quality Gate Check
+    runs-on: ubuntu-latest
+    needs: 
+      - client-test
+      - server-test 
+    steps:
+      - name: Source Code Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@master
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: SonarQube Quality Gate check
+        id: sonarqube-quality-gate-check
+        uses: sonarsource/sonarqube-quality-gate-action@master
+        with:
+          pollingTimeoutSec: 600
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }} #OPTIONAL
+      
+      - name: "SonarQube Quality Gate Status"
+        run: echo "The Quality Gate status is ${{ steps.sonarqube-quality-gate-check.outputs.quality-gate-status }}"
+
+  client-build:
+    name: Client Build
+    runs-on: ubuntu-latest
+    needs: 
+      - client-test
+      - sonarqube
+
+    defaults:
+      run:
+        working-directory: client
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Setup NodeJS
+        uses: actions/setup-node@v4
+        with:
+          node-version: 19
+          cache: npm
+          cache-dependency-path: client/package-lock.json 
+          
+      - name: Install Client Dependencies
+        run: npm ci
+
+      - name: Build Client
+        run: npm run build --if-present
+
+  docker:
+    name: Docker Build & Push
+    runs-on: ubuntu-latest
+    needs: 
+      - client-build
+      - sonarqube
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4 
+        
+      - name: Login to Docker Hub
+        uses: docker/login-action@v4
+        with:
+          username: ${{ vars.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v4
+
+      - name: Build Docker Image Locally
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          load: true
+          push: false
+          no-cache: true
+          tags: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
+       
+      - name: Install Trivy
+        uses: aquasecurity/setup-trivy@v0.2.6
+        with:
+          cache: true
+          version: latest
+        
+      - name: Trivi Installation Verification
+        run: |
+          trivy --version
+          which trivy
+           
+      - name: Trivy Image Scan
+        run: |
+          trivy image ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest \
+          --format table \
+          --severity HIGH,CRITICAL \
+          --ignore-unfixed \
+          --exit-code 0 > docker-trivy-imagescan.txt #for testing purpose, 
+          # else --output docker-trivy-imagescan.txt and --exit-code 1
+          
+      - name: Upload Image Scan Report
+        uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: Docker Image Scan Report
+          path: docker-trivy-imagescan.txt
+          if-no-files-found: warn
+
+      - name: Generate Source SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          path: .
+          format: spdx-json
+          output-file: source-sbom-spdx.json
+          upload-artifact: true
+
+      - name: Generate Image SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
+          format: spdx-json
+          output-file: image-sbom-spdx.json
+          upload-artifact: true
+
+      - name: Push Docker Image to Docker Hub
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          file: Dockerfile
+          push: true
+          no-cache: true
+          tags: |
+            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
+            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-${{ github.sha }}
+          
+
+  update-qa-manifest:
+    name: Update QA Manifest
+    needs: docker
+    runs-on: ubuntu-latest
+    permissions: 
+      contents: write
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4 
+
+      - name: Update Image Tag in Manifest
+        run: |
+          sed -i "s|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-.*|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-${{ github.sha }}|g" k8-manifests/qa/app-deployment.yaml 
+
+      - name: Show Updated Manifests (Debug)
+        run: |
+          cat k8-manifests/qa/app-deployment.yaml
+
+      - name: Commit and Push Changes
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add k8-manifests/qa/app-deployment.yaml
+          git commit -m "Update QA Image to ${{ github.sha }} [skip ci]" || echo "No Changes to Commit"
+          git pull origin qa --rebase
+          git push origin qa         
+         
+  deploy-to-k8s:
+    name: Deploy to Kubernetes
+    runs-on: ubuntu-latest
+    needs: update-qa-manifest
+    permissions:
+      id-token: write
+      contents: read
+    env:
+      AWS_REGION: ap-southeast-2
+      EKS_CLUSTER_NAME: my-cluster
+      K8S_NAMESPACE: qa
+
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          ref: qa #explicitly pull latest
+          fetch-depth: 0
+
+      - name: Config AWS Credentials from Github OIDC
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_TO_ASSUME }}
+          aws-region: ${{ env.AWS_REGION }}
+      
+      - name: Setup Kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Generate Kubeconfig File for EKS
+        run: aws eks update-kubeconfig --region "${AWS_REGION}" --name "${EKS_CLUSTER_NAME}"
+
+      - name: Verify Identity
+        run: |
+          aws sts get-caller-identity
+          kubectl config current-context
+
+      - name: Verify Namespace Access
+        run: |
+          kubectl get pods -n "${K8S_NAMESPACE}"
+          kubectl get services -n "${K8S_NAMESPACE}"
+          kubectl auth can-i create deployment -n "${K8S_NAMESPACE}"
+          kubectl auth can-i create services -n "${K8S_NAMESPACE}"
+          kubectl auth can-i create ingress.networking.k8s.io -n "${K8S_NAMESPACE}"
+
+      - name: Deploy Manifests
+        run: |
+          kubectl apply -f k8-manifests/${K8S_NAMESPACE}/ -n "${K8S_NAMESPACE}" 
+
+      - name: Verify Rollout
+        run: |
+          kubectl rollout status deployment/nodejs-app -n "${K8S_NAMESPACE}" --timeout=180s
+          
+       
+      
+
+
+
+
+
+
+
+
+
+
+
+
+      
+
