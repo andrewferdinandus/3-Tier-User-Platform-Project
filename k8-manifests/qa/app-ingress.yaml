@@ -12,8 +12,8 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    - host: my-app.art
-      http:
+    #- host: my-app.art
+    - http:
         paths:
           - path: /
             pathType: Prefix
