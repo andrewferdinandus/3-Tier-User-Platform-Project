@@ -17,7 +17,7 @@ spec:
       - name: regcred
       containers:
       - name: nodejs-app
-        image: andrewferdi/multitier-platform:b180a31f4d699e23f9b0aafd5b9df40f5fcf8ae9
+        image: andrewferdi/multitier-platform:4e29487feb554f49746cb352a25719a7083f142a
         ports:
         - containerPort: 5000
         env:
