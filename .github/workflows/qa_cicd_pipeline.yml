@@ -384,9 +384,10 @@ jobs:
           file: Dockerfile
           load: true
           push: false
+          no-cache: true
           tags: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+          #cache-from: type=gha
+          #cache-to: type=gha,mode=max
        
       - name: Install Trivy
         uses: aquasecurity/setup-trivy@v0.2.6
@@ -438,6 +439,7 @@ jobs:
           context: .
           file: Dockerfile
           push: true
+          no-cache: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
             ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
