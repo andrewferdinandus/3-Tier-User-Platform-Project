@@ -12,8 +12,8 @@ metadata:
 spec:
   ingressClassName: alb
   rules:
-    #- host: prod.ferdi.kiwi
-    - http:
+    - host: prod.ferdi.kiwi
+      http:
         paths:
           - path: /
             pathType: Prefix
