@@ -68,8 +68,7 @@ jobs:
           git commit -m "Update prod Image to ${{ github.sha }} [skip ci]" || echo "No Changes to Commit"
           git pull origin prod --rebase
           git push origin prod
-
-      
+           
   deploy-to-k8s:
     name: Deploy to Production Kubernetes
     needs: update-prod-manifest
