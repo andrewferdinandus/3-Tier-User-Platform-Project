@@ -442,7 +442,7 @@ jobs:
           no-cache: true
           tags: |
             ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-latest
-            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}
+            ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-${{ github.sha }}
           
 
   update-qa-manifest:
@@ -458,7 +458,7 @@ jobs:
 
       - name: Update Image Tag in Manifest
         run: |
-          sed -i "s|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:.*|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:${{ github.sha }}|g" k8-manifests/qa/app-deployment.yaml 
+          sed -i "s|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-.*|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-${{ github.sha }}|g" k8-manifests/qa/app-deployment.yaml 
 
       - name: Show Updated Manifests (Debug)
         run: |
