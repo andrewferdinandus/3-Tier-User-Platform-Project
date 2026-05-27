@@ -1,4 +1,4 @@
-name: Production CD Pipeline
+name: Prod CD Pipeline
 on: 
   push:
     branches:
