@@ -513,7 +513,7 @@ jobs:
           kubectl get services -n "${K8S_NAMESPACE}"
           kubectl auth can-i create deployment -n "${K8S_NAMESPACE}"
           kubectl auth can-i create services -n "${K8S_NAMESPACE}"
-          kubectl auth can-i ingress.networking.k8s.io -n "${K8S_NAMESPACE}"
+          kubectl auth can-i create ingress.networking.k8s.io -n "${K8S_NAMESPACE}"
 
       - name: Deploy Manifests
         run: |
