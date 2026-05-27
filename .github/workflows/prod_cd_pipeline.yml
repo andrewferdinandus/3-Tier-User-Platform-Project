@@ -55,7 +55,7 @@ jobs:
 
       - name: Update Image tag in Production Manifest
         run: |
-          sed -i "s|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:qa-.*|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:prod-${{ github.sha }}|g" k8-manifests/prod/app-deployment.yaml 
+          sed -i "s|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:.*|image: ${{ vars.DOCKERHUB_USERNAME }}/multitier-platform:prod-${{ github.sha }}|g" k8-manifests/prod/app-deployment.yaml 
 
       - name: Show Updated Manifest
         run: cat k8-manifests/prod/app-deployment.yaml
